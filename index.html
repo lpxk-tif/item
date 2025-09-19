@@ -3,195 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>注文システム</title>
+<title>出欠システム</title>
 <style>
 body{font-family:sans-serif; padding:20px; background:#f3f4f6;}
 h1{color:#1f2937;}
-section{margin-bottom:16px;}
-h3{cursor:pointer; background:#e5e7eb; padding:8px; border-radius:6px;}
-.list{display:none; border:1px solid #ddd; border-radius:6px; background:#fff; margin-top:6px;}
-table{width:100%; border-collapse:collapse;}
-th,td{padding:6px; border-bottom:1px solid #ddd; text-align:left;}
-input[type="number"]{width:60px;}
-button{padding:8px 14px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;}
+button{padding:10px 20px; margin:10px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;}
 button:hover{background:#1e40af;}
-.summary{margin-top:16px; font-weight:bold;}
-.hidden{display:none;}
-#confirmPage section{background:#fff; padding:12px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-#confirmPage h2{margin-bottom:10px;}
+section{display:none;}
+table{width:100%; border-collapse:collapse; background:#fff; margin-top:20px;}
+th,td{border:1px solid #ddd; padding:8px; text-align:left;}
+th{background:#e5e7eb;}
 </style>
 </head>
 <body>
 
-<h1>注文システム</h1>
+<!-- ホーム画面 -->
+<section id="home" style="display:block;">
+  <h1>学校 出欠システム</h1>
+  <button onclick="showStudent()">出席確認（生徒用）</button>
+  <button onclick="teacherLogin()">先生ログイン</button>
+</section>
 
-<!-- ========== 注文入力ページ ========== -->
-<div id="orderPage">
-  <form id="orderForm">
-    <div id="products-container"></div>
+<!-- 生徒画面 -->
+<section id="student">
+  <h1>出欠確認（生徒用）</h1>
+  <label>名前: <input type="text" id="studentName"></label><br>
+  <button onclick="markAttendance('出席')">出席</button>
+  <button onclick="markAttendance('欠席')">欠席</button>
+  <p id="result"></p>
+  <button onclick="goHome()">🏠 ホームに戻る</button>
+</section>
 
-    <section>
-      <label><input type="checkbox" id="express"> 速達 (プラス300円)</label>
-    </section>
-
-    <section>
-      <button type="button" id="calculate">合計金額を確認</button>
-      <button type="button" id="goConfirm">注文確認へ</button>
-    </section>
-
-    <p class="summary" id="totalDisplay">合計: ¥0</p>
-  </form>
-</div>
-
-<!-- ========== 注文確認ページ ========== -->
-<div id="confirmPage" class="hidden">
-  <section id="orderSummary"></section>
-
-  <section>
-    <h2>お届け先情報</h2>
-    <form id="infoForm">
-      <label>お名前: <input type="text" id="name" required></label>
-      <label>電話番号: <input type="tel" id="tel" required></label>
-      <label>住所: <input type="text" id="address" required></label>
-      <label>受取希望日: <input type="date" id="date" required></label>
-      <label>受取希望時間: <input type="time" id="time" required></label>
-      <button type="button" id="submitOrder">注文送信</button>
-    </form>
-  </section>
-
-  <section id="result"></section>
-</div>
+<!-- 先生画面 -->
+<section id="teacher">
+  <h1>出欠一覧（先生用）</h1>
+  <table>
+    <thead>
+      <tr><th>日付</th><th>名前</th><th>出欠</th></tr>
+    </thead>
+    <tbody id="attendanceList"></tbody>
+  </table>
+  <button onclick="goHome()">🏠 ホームに戻る</button>
+</section>
 
 <script>
-// ---------------- 商品データ ----------------
-const categories = {
-  "食べ物": [
-    {name:"カップラーメン", price:180},
-    {name:"おにぎり（鮭）", price:120},
-    {name:"ペットボトル水(500ml)", price:100},
-    {name:"缶コーヒー", price:130},
-    {name:"菓子パン", price:150}
-  ],
-  "生活用品": [
-    {name:"ティッシュ(5箱)", price:300},
-    {name:"トイレットペーパー(12ロール)", price:350},
-    {name:"食器用洗剤", price:200},
-    {name:"洗濯洗剤", price:400}
-  ],
-  "衛生用品": [
-    {name:"マスク(50枚)", price:500},
-    {name:"アルコール消毒液", price:600},
-    {name:"ハンドソープ", price:250}
-  ],
-  "文具": [
-    {name:"ボールペン", price:100},
-    {name:"ノート", price:120},
-    {name:"付箋", price:150},
-    {name:"クリアファイル(10枚)", price:200}
-  ],
-  "家電": [
-    {name:"ドライヤー", price:3000},
-    {name:"電気ケトル", price:2500},
-    {name:"炊飯器", price:8000}
-  ]
-};
-
-// ---------------- UI生成 ----------------
-const container = document.getElementById('products-container');
-for(let cat in categories){
-  const section = document.createElement('section');
-  const title = document.createElement('h3');
-  title.textContent = cat;
-
-  const list = document.createElement('div');
-  list.className = 'list';
-
-  const table = document.createElement('table');
-  table.innerHTML = `<tr><th>商品名</th><th>価格</th><th>数量</th></tr>`;
-
-  categories[cat].forEach(item=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${item.name}</td>
-      <td>¥${item.price}</td>
-      <td><input type="number" min="0" value="0" data-price="${item.price}" data-name="${item.name}"></td>
-    `;
-    table.appendChild(tr);
-  });
-
-  list.appendChild(table);
-  title.addEventListener('click', ()=> list.style.display = list.style.display==='none'?'block':'none');
-
-  section.appendChild(title);
-  section.appendChild(list);
-  container.appendChild(section);
+// 画面切り替え
+function showSection(id){
+  document.querySelectorAll("section").forEach(sec=>sec.style.display="none");
+  document.getElementById(id).style.display="block";
 }
-
-// ---------------- 合計計算 ----------------
-function calculateTotal(){
-  const inputs = document.querySelectorAll('#products-container input[type="number"]');
-  let total = 0;
-  inputs.forEach(input=>{
-    const qty = parseInt(input.value) || 0;
-    total += qty * parseInt(input.dataset.price);
-  });
-  if(document.getElementById('express').checked) total += 300;
-  document.getElementById('totalDisplay').textContent = `合計: ¥${total}`;
-  return total;
+function showStudent(){ showSection("student"); }
+function showTeacher(){ 
+  loadAttendance();
+  showSection("teacher"); 
 }
-document.getElementById('calculate').addEventListener('click', calculateTotal);
+function goHome(){ showSection("home"); }
 
-// ---------------- 注文確認へ進む ----------------
-document.getElementById('goConfirm').addEventListener('click', ()=>{
-  const inputs = document.querySelectorAll('#products-container input[type="number"]');
-  const orderItems = [];
-  inputs.forEach(input=>{
-    const qty = parseInt(input.value)||0;
-    if(qty>0){
-      orderItems.push({name: input.dataset.name, quantity: qty, price: parseInt(input.dataset.price)});
-    }
-  });
-  if(orderItems.length===0){
-    alert('商品を1つ以上選択してください');
+// 生徒出欠記録
+function markAttendance(status){
+  const name = document.getElementById("studentName").value.trim();
+  if(!name){
+    alert("名前を入力してください");
     return;
   }
-  const total = calculateTotal();
-  const express = document.getElementById('express').checked;
+  const today = new Date().toLocaleDateString();
+  let records = JSON.parse(localStorage.getItem("attendance")) || [];
+  records.push({name, status, date: today});
+  localStorage.setItem("attendance", JSON.stringify(records));
+  document.getElementById("result").textContent = `✅ ${name} さんを「${status}」で記録しました`;
+}
 
-  // 注文内容を表示
-  let html = '<h2>注文内容</h2><ul>';
-  orderItems.forEach(item=>{
-    html += `<li>${item.name} × ${item.quantity}個 = ¥${item.quantity*item.price}</li>`;
-  });
-  if(express) html += '<li>速達: 選択済み (+300円)</li>';
-  html += `</ul><p class="summary">合計: ¥${total}</p>`;
-  document.getElementById('orderSummary').innerHTML = html;
+// 先生ログイン
+function teacherLogin(){
+  const pass = prompt("先生用パスワードを入力してください:");
+  if(pass === "0018"){
+    showTeacher();
+  }else{
+    alert("パスワードが違います");
+  }
+}
 
-  // ページ切り替え
-  document.getElementById('orderPage').classList.add('hidden');
-  document.getElementById('confirmPage').classList.remove('hidden');
-});
-
-// ---------------- 注文送信 ----------------
-document.getElementById('submitOrder').addEventListener('click', ()=>{
-  const name = document.getElementById('name').value.trim();
-  const tel = document.getElementById('tel').value.trim();
-  const address = document.getElementById('address').value.trim();
-  const date = document.getElementById('date').value;
-  const time = document.getElementById('time').value;
-
-  if(!name||!tel||!address||!date||!time){
-    alert('すべての情報を入力してください');
+// 出欠読み込み
+function loadAttendance(){
+  const data = JSON.parse(localStorage.getItem("attendance")) || [];
+  const tbody = document.getElementById("attendanceList");
+  tbody.innerHTML = "";
+  if(data.length===0){
+    tbody.innerHTML = "<tr><td colspan='3'>まだ出欠データがありません</td></tr>";
     return;
   }
-
-  document.getElementById('result').innerHTML =
-    `<p>✅ 注文が完了しました！ありがとうございます。</p>
-     <p>お名前: ${name}</p>
-     <p>電話番号: ${tel}</p>
-     <p>住所: ${address}</p>
-     <p>受取希望: ${date} ${time}</p>`;
-});
+  data.forEach(record=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${record.date}</td><td>${record.name}</td><td>${record.status}</td>`;
+    tbody.appendChild(tr);
+  });
+}
 </script>
 
 </body>
