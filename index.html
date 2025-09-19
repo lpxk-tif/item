@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>注文フォーム - tyuumou</title>
+<style>
+body{font-family:sans-serif; padding:20px; background:#f3f4f6;}
+h1{color:#1f2937;}
+section{margin-bottom:16px;}
+h3{cursor:pointer; background:#eee; padding:6px; border-radius:4px;}
+.list{display:none; max-height:300px; overflow-y:scroll; border:1px solid #ddd; padding:6px; border-radius:4px; background:#fff;}
+label{display:block; font-size:13px; margin-bottom:2px;}
+button{padding:8px 14px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;}
+button:hover{background:#1e40af;}
+.summary{margin-top:16px; font-weight:bold;}
+</style>
+</head>
+<body>
+
+<h1>注文システム</h1>
+
+<form id="orderForm">
+
+<div id="products-container"></div>
+
+<section>
+<label><input type="checkbox" id="express"> 速達 (プラス300円)</label>
+</section>
+
+<section>
+<button type="button" id="calculate">合計金額を確認</button>
+<button type="button" id="submitOrder">注文送信</button>
+</section>
+
+<p class="summary" id="totalDisplay">合計: ¥0</p>
+
+</form>
+
+<script>
+// ---------------- 商品データ生成 ----------------
+const categories = {
+  食べ物: [], 生活用品: [], 衛生用品: [], 文具: [], 家電: [], 趣味: [], 衣類: [], 健康: []
+};
+
+// 各分野200項目以上を動的生成
+for(let cat in categories){
+  for(let i=1;i<=200;i++){
+    const price = Math.floor(Math.random()*500)+50; // 50〜550円のランダム価格
+    categories[cat].push({name:`${cat} 商品${i}`, price});
+  }
+}
+
+// ---------------- UI生成 ----------------
+const container = document.getElementById('products-container');
+
+for(let cat in categories){
+  const section = document.createElement('section');
+  const title = document.createElement('h3');
+  title.textContent = cat;
+
+  const list = document.createElement('div');
+  list.className = 'list';
+
+  categories[cat].forEach(item=>{
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="number" min="0" value="0" data-price="${item.price}" data-name="${item.name}"> ${item.name} (${item.price}円)`;
+    list.appendChild(label);
+  });
+
+  title.addEventListener('click', ()=> list.style.display = list.style.display==='none'?'block':'none');
+
+  section.appendChild(title);
+  section.appendChild(list);
+  container.appendChild(section);
+}
+
+// ---------------- 料金計算 ----------------
+function calculateTotal(){
+  const inputs = document.querySelectorAll('#products-container input[type="number"]');
+  let total = 0;
+  inputs.forEach(input=>{
+    const qty = parseInt(input.value) || 0;
+    const price = parseInt(input.dataset.price);
+    total += qty * price;
+  });
+
+  if(document.getElementById('express').checked){
+    total += 300;
+  }
+  document.getElementById('totalDisplay').textContent = `合計: ¥${total}`;
+  return total;
+}
+
+document.getElementById('calculate').addEventListener('click', calculateTotal);
+
+// ---------------- 注文送信 ----------------
+document.getElementById('submitOrder').addEventListener('click', ()=>{
+  const inputs = document.querySelectorAll('#products-container input[type="number"]');
+  const orderItems = [];
+  inputs.forEach(input=>{
+    const qty = parseInt(input.value)||0;
+    if(qty>0){
+      orderItems.push({name: input.dataset.name, quantity: qty, price: parseInt(input.dataset.price)});
+    }
+  });
+
+  if(orderItems.length===0){
+    alert('商品を1つ以上選択してください');
+    return;
+  }
+
+  const total = calculateTotal();
+  const express = document.getElementById('express').checked;
+
+  // データを sessionStorage に保存して sousinn.html に移動
+  sessionStorage.setItem('orderData', JSON.stringify({orderItems, total, express}));
+  window.location.href = 'sousinn.html';
+});
+</script>
+
+</body>
+</html>
