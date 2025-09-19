@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>注文確認</title>
+<style>
+body{font-family:sans-serif; padding:20px; background:#f3f4f6;}
+h1{color:#1f2937;}
+section{margin-bottom:20px; padding:12px; background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+label{display:block; margin-bottom:8px;}
+button{padding:8px 14px; border:none; background:#16a34a; color:#fff; border-radius:6px; cursor:pointer;}
+button:hover{background:#15803d;}
+.price{font-weight:bold;}
+</style>
+</head>
+<body>
+
+<h1>注文内容確認・送信</h1>
+
+<section id="orderSummary">
+<!-- 注文内容ここに表示 -->
+</section>
+
+<section>
+<h2>お届け先情報</h2>
+<form id="infoForm">
+<label>お名前: <input type="text" id="name" required></label>
+<label>電話番号: <input type="tel" id="tel" required></label>
+<label>住所: <input type="text" id="address" required></label>
+<label>受取希望日: <input type="date" id="date" required></label>
+<label>受取希望時間: <input type="time" id="time" required></label>
+<button type="button" id="submitOrder">注文送信</button>
+</form>
+</section>
+
+<section id="result"></section>
+
+<script>
+window.addEventListener('DOMContentLoaded', ()=>{
+  const data = JSON.parse(sessionStorage.getItem('orderData')||'{}');
+  const summary = document.getElementById('orderSummary');
+  if(!data || Object.keys(data).length===0){
+    summary.innerHTML='<p>注文データが見つかりません。</p>';
+    return;
+  }
+
+  let html = '<h2>注文内容</h2><ul>';
+  for(let key in data){
+    if(key!=='total' && key!=='express'){
+      html += `<li>${key}: ${data[key]} 個</li>`;
+    }
+  }
+  if(data.express) html += '<li>速達: 選択済み (+300円)</li>';
+  html += `</ul><p class="price">合計: ¥${data.total}</p>`;
+  summary.innerHTML = html;
+});
+
+document.getElementById('submitOrder').addEventListener('click', ()=>{
+  const name = document.getElementById('name').value.trim();
+  const tel = document.getElementById('tel').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+
+  if(!name||!tel||!address||!date||!time){
+    alert('すべての情報を入力してください');
+    return;
+  }
+
+  // 実際はここでサーバー送信する
+  // 例: fetch('/api/order', { method:'POST', body:JSON.stringify({...}) })
+  
+  document.getElementById('result').innerHTML = '<p>✅ 注文が完了しました！ありがとうございます。</p>';
+});
+</script>
+
+</body>
+</html>
