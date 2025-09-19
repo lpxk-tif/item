@@ -8,9 +8,11 @@
 body{font-family:sans-serif; padding:20px; background:#f3f4f6;}
 h1{color:#1f2937;}
 section{margin-bottom:16px;}
-h3{cursor:pointer; background:#eee; padding:6px; border-radius:4px;}
-.list{display:none; max-height:300px; overflow-y:scroll; border:1px solid #ddd; padding:6px; border-radius:4px; background:#fff;}
-label{display:block; font-size:13px; margin-bottom:2px;}
+h3{cursor:pointer; background:#e5e7eb; padding:8px; border-radius:6px;}
+.list{display:none; border:1px solid #ddd; border-radius:6px; background:#fff; margin-top:6px;}
+table{width:100%; border-collapse:collapse;}
+th,td{padding:6px; border-bottom:1px solid #ddd; text-align:left;}
+input[type="number"]{width:60px;}
 button{padding:8px 14px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;}
 button:hover{background:#1e40af;}
 .summary{margin-top:16px; font-weight:bold;}
@@ -38,18 +40,38 @@ button:hover{background:#1e40af;}
 </form>
 
 <script>
-// ---------------- 商品データ生成 ----------------
+// ---------------- 商品データ ----------------
 const categories = {
-  食べ物: [], 生活用品: [], 衛生用品: [], 文具: [], 家電: [], 趣味: [], 衣類: [], 健康: []
+  "食べ物": [
+    {name:"カップラーメン", price:180},
+    {name:"おにぎり（鮭）", price:120},
+    {name:"ペットボトル水(500ml)", price:100},
+    {name:"缶コーヒー", price:130},
+    {name:"菓子パン", price:150}
+  ],
+  "生活用品": [
+    {name:"ティッシュ(5箱)", price:300},
+    {name:"トイレットペーパー(12ロール)", price:350},
+    {name:"食器用洗剤", price:200},
+    {name:"洗濯洗剤", price:400}
+  ],
+  "衛生用品": [
+    {name:"マスク(50枚)", price:500},
+    {name:"アルコール消毒液", price:600},
+    {name:"ハンドソープ", price:250}
+  ],
+  "文具": [
+    {name:"ボールペン", price:100},
+    {name:"ノート", price:120},
+    {name:"付箋", price:150},
+    {name:"クリアファイル(10枚)", price:200}
+  ],
+  "家電": [
+    {name:"ドライヤー", price:3000},
+    {name:"電気ケトル", price:2500},
+    {name:"炊飯器", price:8000}
+  ]
 };
-
-// 各分野200項目以上を動的生成
-for(let cat in categories){
-  for(let i=1;i<=200;i++){
-    const price = Math.floor(Math.random()*500)+50; // 50〜550円のランダム価格
-    categories[cat].push({name:`${cat} 商品${i}`, price});
-  }
-}
 
 // ---------------- UI生成 ----------------
 const container = document.getElementById('products-container');
@@ -62,12 +84,22 @@ for(let cat in categories){
   const list = document.createElement('div');
   list.className = 'list';
 
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <tr><th>商品名</th><th>価格</th><th>数量</th></tr>
+  `;
+
   categories[cat].forEach(item=>{
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="number" min="0" value="0" data-price="${item.price}" data-name="${item.name}"> ${item.name} (${item.price}円)`;
-    list.appendChild(label);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.name}</td>
+      <td>¥${item.price}</td>
+      <td><input type="number" min="0" value="0" data-price="${item.price}" data-name="${item.name}"></td>
+    `;
+    table.appendChild(tr);
   });
 
+  list.appendChild(table);
   title.addEventListener('click', ()=> list.style.display = list.style.display==='none'?'block':'none');
 
   section.appendChild(title);
@@ -113,7 +145,6 @@ document.getElementById('submitOrder').addEventListener('click', ()=>{
   const total = calculateTotal();
   const express = document.getElementById('express').checked;
 
-  // データを sessionStorage に保存して sousinn.html に移動
   sessionStorage.setItem('orderData', JSON.stringify({orderItems, total, express}));
   window.location.href = 'sousinn.html';
 });
