@@ -1,165 +1,47 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>出欠システム</title>
-<style>
-body{font-family:sans-serif; padding:20px; background:#f3f4f6;}
-h1{color:#1f2937;}
-button{padding:10px 20px; margin:10px; border:none; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;}
-button:hover{background:#1e40af;}
-section{display:none;}
-table{width:100%; border-collapse:collapse; background:#fff; margin-top:20px;}
-th,td{border:1px solid #ddd; padding:8px; text-align:left;}
-th{background:#e5e7eb;}
-label{display:block; margin:6px 0;}
-</style>
+  <meta charset="UTF-8">
+  <title>ログイン - 出欠システム</title>
 </head>
 <body>
+  <h2>ログイン画面</h2>
+  <input id="name" placeholder="名前"><br>
+  <input id="studentId" placeholder="出席番号 (例:3401)"><br>
+  <input id="password" type="password" placeholder="パスワード"><br>
+  <button onclick="login()">ログイン</button>
 
-<!-- ホーム画面 -->
-<section id="home" style="display:block;">
-  <h1>学校 出欠システム</h1>
-  <button onclick="showStudent()">出席確認（生徒用）</button>
-  <button onclick="teacherLogin()">先生ログイン</button>
-</section>
+  <script>
+    // ローカルストレージに保存して次回自動入力
+    window.onload = () => {
+      if(localStorage.getItem("name")){
+        document.getElementById("name").value = localStorage.getItem("name");
+        document.getElementById("studentId").value = localStorage.getItem("studentId");
+      }
+    };
 
-<!-- 生徒画面 -->
-<section id="student">
-  <h1>出欠確認（生徒用）</h1>
-  <label>名前: <input type="text" id="studentName"></label>
-  <label>出席番号: <input type="number" id="studentNumber"></label>
-  <label>パスワード: <input type="password" id="studentPass"></label>
+    function login() {
+      const name = document.getElementById("name").value;
+      const studentId = document.getElementById("studentId").value;
+      const password = document.getElementById("password").value;
 
-  <h3>出欠選択</h3>
-  <button onclick="markAttendance('出席')">出席</button>
-  <button onclick="showAbsenceReasons()">欠席</button>
+      if(!name || !studentId || !password){
+        alert("全て入力してください");
+        return;
+      }
 
-  <div id="absenceReasons" style="display:none; margin-top:10px;">
-    <h4>欠席理由を選択してください</h4>
-    <label><input type="radio" name="reason" value="病欠"> 病欠</label>
-    <label><input type="radio" name="reason" value="公欠"> 公欠</label>
-    <label><input type="radio" name="reason" value="遅刻"> 遅刻</label>
-    <label><input type="radio" name="reason" value="早退"> 早退</label>
-    <label><input type="radio" name="reason" value="その他"> その他</label>
-    <button onclick="submitAbsence()">欠席を記録</button>
-  </div>
+      // 保存
+      localStorage.setItem("name", name);
+      localStorage.setItem("studentId", studentId);
 
-  <p id="result"></p>
-  <button onclick="goHome()">🏠 ホームに戻る</button>
-</section>
+      // 出席番号からクラス判定（上2桁）
+      const classCode = studentId.substring(0, 2);
 
-<!-- 先生画面 -->
-<section id="teacher">
-  <h1>出欠一覧（先生用）</h1>
-  <table>
-    <thead>
-      <tr><th>日付</th><th>名前</th><th>番号</th><th>出欠</th></tr>
-    </thead>
-    <tbody id="attendanceList"></tbody>
-  </table>
-  <button onclick="goHome()">🏠 ホームに戻る</button>
-</section>
+      // ここでGASにログイン情報を送って記録してもOK
 
-<script>
-// ◆サンプル生徒データ（実際は別途登録機能を追加すると良い）
-const students = [
-  {name:"田中太郎", number:1, pass:"abc123"},
-  {name:"佐藤花子", number:2, pass:"def456"},
-  {name:"鈴木一郎", number:3, pass:"ghi789"}
-];
-
-// 画面切り替え
-function showSection(id){
-  document.querySelectorAll("section").forEach(sec=>sec.style.display="none");
-  document.getElementById(id).style.display="block";
-}
-function showStudent(){ showSection("student"); }
-function showTeacher(){ loadAttendance(); showSection("teacher"); }
-function goHome(){ showSection("home"); }
-
-// 生徒認証
-function authenticate(name, number, pass){
-  return students.find(s=>s.name===name && s.number==number && s.pass===pass);
-}
-
-// 出欠記録
-function markAttendance(status){
-  const name = document.getElementById("studentName").value.trim();
-  const number = document.getElementById("studentNumber").value.trim();
-  const pass = document.getElementById("studentPass").value.trim();
-
-  const student = authenticate(name, number, pass);
-  if(!student){
-    alert("認証失敗：名前・番号・パスワードを確認してください");
-    return;
-  }
-
-  if(status==="出席"){
-    saveRecord(student.name, student.number, status);
-    document.getElementById("result").textContent = `✅ ${student.name} さんを「${status}」で記録しました`;
-  }
-}
-
-// 欠席理由を表示
-function showAbsenceReasons(){
-  document.getElementById("absenceReasons").style.display="block";
-}
-
-// 欠席を送信
-function submitAbsence(){
-  const name = document.getElementById("studentName").value.trim();
-  const number = document.getElementById("studentNumber").value.trim();
-  const pass = document.getElementById("studentPass").value.trim();
-
-  const student = authenticate(name, number, pass);
-  if(!student){
-    alert("認証失敗：名前・番号・パスワードを確認してください");
-    return;
-  }
-
-  const reason = document.querySelector("input[name='reason']:checked");
-  if(!reason){
-    alert("欠席理由を選んでください");
-    return;
-  }
-
-  saveRecord(student.name, student.number, "欠席（"+reason.value+"）");
-  document.getElementById("result").textContent = `✅ ${student.name} さんを「欠席（${reason.value}）」で記録しました`;
-  document.getElementById("absenceReasons").style.display="none";
-}
-
-// データ保存
-function saveRecord(name, number, status){
-  const today = new Date().toLocaleDateString();
-  let records = JSON.parse(localStorage.getItem("attendance")) || [];
-  records.push({date: today, name, number, status});
-  localStorage.setItem("attendance", JSON.stringify(records));
-}
-
-// 先生ログイン
-function teacherLogin(){
-  const pass = prompt("先生用パスワードを入力してください:");
-  if(pass === "0018"){ showTeacher(); }
-  else{ alert("パスワードが違います"); }
-}
-
-// 出欠一覧読み込み
-function loadAttendance(){
-  const data = JSON.parse(localStorage.getItem("attendance")) || [];
-  const tbody = document.getElementById("attendanceList");
-  tbody.innerHTML = "";
-  if(data.length===0){
-    tbody.innerHTML = "<tr><td colspan='4'>まだ出欠データがありません</td></tr>";
-    return;
-  }
-  data.forEach(record=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${record.date}</td><td>${record.name}</td><td>${record.number}</td><td>${record.status}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-</script>
+      alert(`${name} さん（${classCode}クラス）でログインしました`);
+      window.location.href = "attendance.html"; // 出欠画面へ
+    }
+  </script>
 </body>
 </html>
