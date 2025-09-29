@@ -2,45 +2,142 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ログイン - 出欠システム</title>
+  <title>出欠確認システム</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f3f4f6; }
+    h1 { color: #1f2937; }
+    button { padding: 10px 20px; margin: 5px; border: none; background: #3b82f6; color: white; border-radius: 8px; }
+    input { padding: 8px; margin: 5px; }
+    .hidden { display: none; }
+    .card { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body>
-  <h2>ログイン画面</h2>
-  <input id="name" placeholder="名前"><br>
-  <input id="studentId" placeholder="出席番号 (例:3401)"><br>
-  <input id="password" type="password" placeholder="パスワード"><br>
-  <button onclick="login()">ログイン</button>
+  <h1>出欠確認システム</h1>
+
+  <!-- ログイン画面 -->
+  <div id="login-screen" class="card">
+    <h2>ログイン</h2>
+    <input type="text" id="name" placeholder="名前"><br>
+    <input type="password" id="password" placeholder="パスワード"><br>
+    <input type="number" id="studentId" placeholder="出席番号 (例: 3401)"><br>
+    <button onclick="registerStudent()">登録してログイン</button>
+    <button onclick="loginStudent()">ログイン</button>
+    <hr>
+    <input type="password" id="teacherPass" placeholder="先生用パスワード">
+    <button onclick="loginTeacher()">先生ログイン</button>
+  </div>
+
+  <!-- 生徒画面 -->
+  <div id="student-screen" class="card hidden">
+    <h2 id="welcome"></h2>
+    <button onclick="submitAttendance('出席')">出席</button>
+    <button onclick="submitAttendance('欠席')">欠席</button>
+    <button onclick="logout()">ログアウト</button>
+  </div>
+
+  <!-- 先生画面 -->
+  <div id="teacher-screen" class="card hidden">
+    <h2>先生用 出欠確認</h2>
+    <select id="classSelect" onchange="showClass()"></select>
+    <div id="classList"></div>
+    <button onclick="logout()">ログアウト</button>
+  </div>
 
   <script>
-    // ローカルストレージに保存して次回自動入力
-    window.onload = () => {
-      if(localStorage.getItem("name")){
-        document.getElementById("name").value = localStorage.getItem("name");
-        document.getElementById("studentId").value = localStorage.getItem("studentId");
-      }
-    };
+    // 学生データと出欠データを localStorage に保存
+    const students = JSON.parse(localStorage.getItem("students")) || {};
+    const attendance = JSON.parse(localStorage.getItem("attendance")) || {};
 
-    function login() {
+    let currentUser = null;
+
+    // 登録（新規）
+    function registerStudent() {
       const name = document.getElementById("name").value;
-      const studentId = document.getElementById("studentId").value;
-      const password = document.getElementById("password").value;
-
-      if(!name || !studentId || !password){
+      const pass = document.getElementById("password").value;
+      const id = document.getElementById("studentId").value;
+      if (!name || !pass || !id) {
         alert("全て入力してください");
         return;
       }
+      if (students[id]) {
+        alert("その出席番号は既に登録されています。");
+        return;
+      }
+      students[id] = { name, pass };
+      localStorage.setItem("students", JSON.stringify(students));
+      alert("登録完了しました。ログインしてください。");
+    }
 
-      // 保存
-      localStorage.setItem("name", name);
-      localStorage.setItem("studentId", studentId);
+    // ログイン（生徒）
+    function loginStudent() {
+      const id = document.getElementById("studentId").value;
+      const pass = document.getElementById("password").value;
+      if (students[id] && students[id].pass === pass) {
+        currentUser = id;
+        document.getElementById("welcome").innerText = `${students[id].name} さん`;
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("student-screen").classList.remove("hidden");
+      } else {
+        alert("ログイン失敗");
+      }
+    }
 
-      // 出席番号からクラス判定（上2桁）
-      const classCode = studentId.substring(0, 2);
+    // 出欠送信
+    function submitAttendance(status) {
+      attendance[currentUser] = { status, time: new Date().toLocaleString() };
+      localStorage.setItem("attendance", JSON.stringify(attendance));
+      alert(`「${status}」を送信しました`);
+    }
 
-      // ここでGASにログイン情報を送って記録してもOK
+    // 先生ログイン
+    function loginTeacher() {
+      const pass = document.getElementById("teacherPass").value;
+      if (pass === "0018") {
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("teacher-screen").classList.remove("hidden");
+        loadClasses();
+      } else {
+        alert("パスワードが違います");
+      }
+    }
 
-      alert(`${name} さん（${classCode}クラス）でログインしました`);
-      window.location.href = "attendance.html"; // 出欠画面へ
+    // クラスごとにリストを作成（例: 34xx, 24xx, 14xx）
+    function loadClasses() {
+      const select = document.getElementById("classSelect");
+      select.innerHTML = "";
+      const classSet = new Set(Object.keys(students).map(id => id.slice(0,2))); // 先頭2桁でクラス判定
+      classSet.forEach(cls => {
+        const option = document.createElement("option");
+        option.value = cls;
+        option.text = `${cls} クラス`;
+        select.appendChild(option);
+      });
+      showClass();
+    }
+
+    // クラスごとの出欠表示
+    function showClass() {
+      const cls = document.getElementById("classSelect").value;
+      const list = document.getElementById("classList");
+      list.innerHTML = "";
+      Object.keys(students).forEach(id => {
+        if (id.startsWith(cls)) {
+          const s = students[id];
+          const att = attendance[id] ? attendance[id].status + " (" + attendance[id].time + ")" : "未入力";
+          const div = document.createElement("div");
+          div.innerText = `${id} ${s.name} → ${att}`;
+          list.appendChild(div);
+        }
+      });
+    }
+
+    // ログアウト
+    function logout() {
+      currentUser = null;
+      document.getElementById("login-screen").classList.remove("hidden");
+      document.getElementById("student-screen").classList.add("hidden");
+      document.getElementById("teacher-screen").classList.add("hidden");
     }
   </script>
 </body>
