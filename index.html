@@ -3,14 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>出欠確認システム</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f3f4f6; }
-    h1 { color: #1f2937; }
-    button { padding: 10px 20px; margin: 5px; border: none; background: #3b82f6; color: white; border-radius: 8px; }
-    input { padding: 8px; margin: 5px; }
-    .hidden { display: none; }
-    .card { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>出欠確認システム</h1>
@@ -45,13 +39,10 @@
   </div>
 
   <script>
-    // 学生データと出欠データを localStorage に保存
     const students = JSON.parse(localStorage.getItem("students")) || {};
     const attendance = JSON.parse(localStorage.getItem("attendance")) || {};
-
     let currentUser = null;
 
-    // 登録（新規）
     function registerStudent() {
       const name = document.getElementById("name").value;
       const pass = document.getElementById("password").value;
@@ -69,7 +60,6 @@
       alert("登録完了しました。ログインしてください。");
     }
 
-    // ログイン（生徒）
     function loginStudent() {
       const id = document.getElementById("studentId").value;
       const pass = document.getElementById("password").value;
@@ -83,14 +73,12 @@
       }
     }
 
-    // 出欠送信
     function submitAttendance(status) {
       attendance[currentUser] = { status, time: new Date().toLocaleString() };
       localStorage.setItem("attendance", JSON.stringify(attendance));
       alert(`「${status}」を送信しました`);
     }
 
-    // 先生ログイン
     function loginTeacher() {
       const pass = document.getElementById("teacherPass").value;
       if (pass === "0018") {
@@ -102,11 +90,10 @@
       }
     }
 
-    // クラスごとにリストを作成（例: 34xx, 24xx, 14xx）
     function loadClasses() {
       const select = document.getElementById("classSelect");
       select.innerHTML = "";
-      const classSet = new Set(Object.keys(students).map(id => id.slice(0,2))); // 先頭2桁でクラス判定
+      const classSet = new Set(Object.keys(students).map(id => id.slice(0, 2)));
       classSet.forEach(cls => {
         const option = document.createElement("option");
         option.value = cls;
@@ -116,7 +103,6 @@
       showClass();
     }
 
-    // クラスごとの出欠表示
     function showClass() {
       const cls = document.getElementById("classSelect").value;
       const list = document.getElementById("classList");
@@ -124,7 +110,9 @@
       Object.keys(students).forEach(id => {
         if (id.startsWith(cls)) {
           const s = students[id];
-          const att = attendance[id] ? attendance[id].status + " (" + attendance[id].time + ")" : "未入力";
+          const att = attendance[id]
+            ? `${attendance[id].status} (${attendance[id].time})`
+            : "未入力";
           const div = document.createElement("div");
           div.innerText = `${id} ${s.name} → ${att}`;
           list.appendChild(div);
@@ -132,7 +120,6 @@
       });
     }
 
-    // ログアウト
     function logout() {
       currentUser = null;
       document.getElementById("login-screen").classList.remove("hidden");
